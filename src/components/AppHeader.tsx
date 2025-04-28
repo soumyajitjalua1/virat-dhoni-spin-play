@@ -14,16 +14,20 @@ const AppHeader = () => {
           RichBig
         </Link>
         <div className="flex items-center space-x-3">
-          <div className="bg-white/20 rounded-full px-3 py-1 text-sm flex items-center">
+          <Link to="/wallet" className="bg-white/20 rounded-full px-3 py-1 text-sm flex items-center">
             <Wallet className="w-4 h-4 mr-2" />
             <span>₹{walletBalance}</span>
-          </div>
-          <Button variant="outline" size="sm" className="bg-game-accent text-game-dark border-none hover:bg-game-accent/80">
-            Login
-          </Button>
-          <Button variant="outline" size="sm" className="bg-white text-game-primary border-none hover:bg-white/90">
-            Register
-          </Button>
+          </Link>
+          <Link to="/login">
+            <Button variant="outline" size="sm" className="bg-game-accent text-game-dark border-none hover:bg-game-accent/80">
+              Login
+            </Button>
+          </Link>
+          <Link to="/register">
+            <Button variant="outline" size="sm" className="bg-white text-game-primary border-none hover:bg-white/90">
+              Register
+            </Button>
+          </Link>
         </div>
       </div>
     </header>
