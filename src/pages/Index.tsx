@@ -1,10 +1,11 @@
-
 import React from 'react';
 import AppHeader from '@/components/AppHeader';
 import GameNavigation from '@/components/GameNavigation';
 import GameBanner from '@/components/GameBanner';
 import FeaturedGames from '@/components/FeaturedGames';
 import GameSection from '@/components/GameSection';
+import WinnerDisplay from '@/components/WinnerDisplay';
+import FooterNavigation from '@/components/FooterNavigation';
 
 const bannerImages = [
   "https://www.pocket52.com/_ipx/s_2400x1200/images/landing-pages/poker-rules-resized.webp",
@@ -36,13 +37,17 @@ const casinoGames = [
 
 const Index = () => {
   return (
-    <div className="min-h-screen pb-6">
+    <div className="min-h-screen pb-20">
       <AppHeader />
       <GameNavigation />
       <GameBanner images={bannerImages} />
       <FeaturedGames />
       <GameSection title="Popular Games" games={popularGames} />
       <GameSection title="Casino Games" games={casinoGames} />
+      <div className="px-2 py-4">
+        <WinnerDisplay />
+      </div>
+      <FooterNavigation />
     </div>
   );
 };

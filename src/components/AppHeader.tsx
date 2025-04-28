@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
+import { Wallet } from 'lucide-react';
 
 const AppHeader = () => {
   const [walletBalance, setWalletBalance] = React.useState(1000);
@@ -10,14 +11,18 @@ const AppHeader = () => {
     <header className="bg-game-primary text-white py-3 px-4 sticky top-0 z-50">
       <div className="flex justify-between items-center">
         <Link to="/" className="text-xl font-bold">
-          Game Portal
+          RichBig
         </Link>
         <div className="flex items-center space-x-3">
-          <div className="bg-white/20 rounded-full px-3 py-1 text-sm">
+          <div className="bg-white/20 rounded-full px-3 py-1 text-sm flex items-center">
+            <Wallet className="w-4 h-4 mr-2" />
             <span>₹{walletBalance}</span>
           </div>
           <Button variant="outline" size="sm" className="bg-game-accent text-game-dark border-none hover:bg-game-accent/80">
-            Deposit
+            Login
+          </Button>
+          <Button variant="outline" size="sm" className="bg-white text-game-primary border-none hover:bg-white/90">
+            Register
           </Button>
         </div>
       </div>
