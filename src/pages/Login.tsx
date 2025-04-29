@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -19,6 +18,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -29,12 +29,35 @@ const Login = () => {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    // This would connect to auth service in a real application
-    console.log("Login attempt:", data);
-    toast({
-      title: "Login Attempt",
-      description: "Login functionality will be implemented with backend integration",
-    });
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Login Successful",
+          description: "Welcome back!",
+        });
+        navigate("/");
+      } else {
+        toast({
+          title: "Login Failed",
+          description: result.message || "Invalid credentials.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Network error. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

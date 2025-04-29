@@ -7,6 +7,8 @@ const WinnerDisplay = () => {
     { id: 1, name: 'User123', amount: 5000 },
     { id: 2, name: 'Player456', amount: 10000 },
     { id: 3, name: 'Gamer789', amount: 7500 },
+    { id: 3, name: 'Gamer789', amount: 7500 },
+    { id: 3, name: 'Gamer789', amount: 7500 },
   ];
 
   return (

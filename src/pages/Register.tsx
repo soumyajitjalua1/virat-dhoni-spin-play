@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -21,6 +20,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const Register = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -33,12 +33,35 @@ const Register = () => {
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
-    // This would connect to auth service in a real application
-    console.log("Registration attempt:", data);
-    toast({
-      title: "Registration Attempt",
-      description: "Registration functionality will be implemented with backend integration",
-    });
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Registration Successful",
+          description: "You can now log in.",
+        });
+        navigate("/login");
+      } else {
+        toast({
+          title: "Registration Failed",
+          description: result.message || "Something went wrong.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Network error. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
