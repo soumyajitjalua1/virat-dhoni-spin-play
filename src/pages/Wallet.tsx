@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Wallet as WalletIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -9,17 +8,52 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 
+interface Transaction {
+  id: number;
+  type: string;
+  amount: number;
+  date: string;
+  status: string;
+}
+
 const Wallet = () => {
-  const [balance, setBalance] = useState(1000);
+  const [balance, setBalance] = useState(0);
   const [amount, setAmount] = useState("");
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const { toast } = useToast();
   
-  // Mock transaction history
-  const transactions = [
-    { id: 1, type: "Deposit", amount: 500, date: "2024-04-28 14:30", status: "Success" },
-    { id: 2, type: "Withdrawal", amount: 200, date: "2024-04-27 10:15", status: "Success" },
-    { id: 3, type: "Game Win", amount: 700, date: "2024-04-26 18:45", status: "Success" }
-  ];
+  // Load wallet balance and transactions from localStorage on component mount
+  useEffect(() => {
+    // Load wallet balance
+    const storedBalance = localStorage.getItem('walletBalance');
+    if (storedBalance) {
+      setBalance(parseInt(storedBalance));
+    }
+    
+    // Load transaction history
+    const storedTransactions = localStorage.getItem('transactions');
+    if (storedTransactions) {
+      setTransactions(JSON.parse(storedTransactions));
+    } else {
+      // Initialize with sample data if no transactions exist
+      const initialTransactions = [
+        { id: 1, type: "Deposit", amount: 500, date: "2024-04-28 14:30", status: "Success" },
+        { id: 2, type: "Withdrawal", amount: 200, date: "2024-04-27 10:15", status: "Success" },
+        { id: 3, type: "Game Win", amount: 700, date: "2024-04-26 18:45", status: "Success" }
+      ];
+      setTransactions(initialTransactions);
+      localStorage.setItem('transactions', JSON.stringify(initialTransactions));
+    }
+    
+    // Reset daily spin opportunity when the day changes
+    const today = new Date().toISOString().split('T')[0];
+    const lastSpinDate = localStorage.getItem('lastSpinDate');
+    
+    if (lastSpinDate !== today) {
+      localStorage.removeItem('hasSpunToday');
+      localStorage.setItem('lastSpinDate', today);
+    }
+  }, []);
   
   const handleAddMoney = () => {
     const addedAmount = Number(amount);
@@ -38,8 +72,33 @@ const Wallet = () => {
       description: `₹${addedAmount} has been added to your wallet`,
     });
     
-    setBalance(prev => prev + addedAmount);
+    const newBalance = balance + addedAmount;
+    setBalance(newBalance);
+    localStorage.setItem('walletBalance', newBalance.toString());
+    
+    // Add transaction record
+    addTransaction("Deposit", addedAmount);
+    
     setAmount("");
+  };
+  
+  const addTransaction = (type: string, amount: number) => {
+    const now = new Date();
+    const dateString = now.toISOString().slice(0, 10) + ' ' + 
+                      now.getHours().toString().padStart(2, '0') + ':' + 
+                      now.getMinutes().toString().padStart(2, '0');
+                      
+    const newTransaction: Transaction = {
+      id: Date.now(),
+      type,
+      amount,
+      date: dateString,
+      status: 'Success'
+    };
+    
+    const updatedTransactions = [newTransaction, ...transactions];
+    setTransactions(updatedTransactions);
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
   };
 
   return (
@@ -115,6 +174,25 @@ const Wallet = () => {
           </CardContent>
         </Card>
         
+        <div className="mb-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-medium">Daily Free Spin</h2>
+            <div className="text-sm">
+              {localStorage.getItem('hasSpunToday') === 'true' ? (
+                <span className="text-red-500">Used for today</span>
+              ) : (
+                <span className="text-green-500">Available</span>
+              )}
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 mb-2">Get one free spin each day! Deposit required.</p>
+          <Link to="/wheel-spin">
+            <Button className="w-full bg-game-primary hover:bg-game-primary/90">
+              Go to Spin & Win
+            </Button>
+          </Link>
+        </div>
+        
         <Tabs defaultValue="all">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="all">All</TabsTrigger>
@@ -128,7 +206,7 @@ const Wallet = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {transactions.map((tx) => (
+                  {transactions.length > 0 ? transactions.map((tx) => (
                     <div key={tx.id} className="border-b pb-3 last:border-b-0">
                       <div className="flex justify-between">
                         <div>
@@ -140,7 +218,9 @@ const Wallet = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-4 text-gray-500">No transactions yet</div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -167,6 +247,9 @@ const Wallet = () => {
                         </div>
                       </div>
                     ))}
+                    {transactions.filter(tx => tx.type === 'Deposit' || tx.type === 'Game Win').length === 0 && (
+                      <div className="text-center py-4 text-gray-500">No deposits yet</div>
+                    )}
                 </div>
               </CardContent>
             </Card>
@@ -193,6 +276,9 @@ const Wallet = () => {
                         </div>
                       </div>
                     ))}
+                    {transactions.filter(tx => tx.type === 'Withdrawal').length === 0 && (
+                      <div className="text-center py-4 text-gray-500">No withdrawals yet</div>
+                    )}
                 </div>
               </CardContent>
             </Card>

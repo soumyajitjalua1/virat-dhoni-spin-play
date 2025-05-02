@@ -1,20 +1,79 @@
-
+// CardGame.tsx (Updated with player customization)
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppHeader from '@/components/AppHeader';
+import { Edit2 } from 'lucide-react';
+
+// Define player interface
+interface Player {
+  id: number;
+  name: string;
+  image: string;
+  team: string;
+  color: string;
+}
 
 const CardGame = () => {
-  const [selectedPlayer, setSelectedPlayer] = useState<'virat' | 'dhoni' | null>(null);
+  const navigate = useNavigate();
+  const { toast: uiToast } = useToast();
+  const [selectedPlayer, setSelectedPlayer] = useState<'left' | 'right' | null>(null);
   const [betAmount, setBetAmount] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState<number>(30);
   const [gamePhase, setGamePhase] = useState<'betting' | 'results'>('betting');
-  const [viratBets, setViratBets] = useState<number>(0);
-  const [dhoniBets, setDhoniBets] = useState<number>(0);
-  const [winner, setWinner] = useState<'virat' | 'dhoni' | null>(null);
-  const [walletBalance, setWalletBalance] = useState<number>(1000);
+  const [leftBets, setLeftBets] = useState<number>(0);
+  const [rightBets, setRightBets] = useState<number>(0);
+  const [winner, setWinner] = useState<'left' | 'right' | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+
+  // Default players
+  const defaultLeftPlayer: Player = {
+    id: 1,
+    name: 'Virat Kohli', 
+    image: '/Virat_Kohli%20.png',
+    team: 'RCB',
+    color: 'bg-blue-600'
+  };
+  
+  const defaultRightPlayer: Player = {
+    id: 2,
+    name: 'MS Dhoni',
+    image: 'https://i.pinimg.com/236x/08/d1/bd/08d1bd467b5e3b22d44b07df0dc173c2.jpg',
+    team: 'CSK',
+    color: 'bg-yellow-500'
+  };
+
+  // State for the players
+  const [leftPlayer, setLeftPlayer] = useState<Player>(defaultLeftPlayer);
+  const [rightPlayer, setRightPlayer] = useState<Player>(defaultRightPlayer);
+
+  // Load custom players and wallet balance from localStorage if available
+  useEffect(() => {
+    // Load players
+    const storedLeftPlayer = localStorage.getItem('leftPlayer');
+    const storedRightPlayer = localStorage.getItem('rightPlayer');
+    
+    if (storedLeftPlayer) {
+      setLeftPlayer(JSON.parse(storedLeftPlayer));
+    }
+    
+    if (storedRightPlayer) {
+      setRightPlayer(JSON.parse(storedRightPlayer));
+    }
+    
+    // Load wallet balance
+    const storedBalance = localStorage.getItem('walletBalance');
+    if (storedBalance) {
+      setWalletBalance(parseInt(storedBalance));
+    } else {
+      // Set default balance if none exists
+      localStorage.setItem('walletBalance', '1000');
+      setWalletBalance(1000);
+    }
+  }, []);
 
   useEffect(() => {
     if (gamePhase === 'betting' && timeLeft > 0) {
@@ -46,27 +105,34 @@ const CardGame = () => {
     }
 
     // Update bet totals
-    if (selectedPlayer === 'virat') {
-      setViratBets(viratBets + amount);
+    if (selectedPlayer === 'left') {
+      setLeftBets(leftBets + amount);
     } else {
-      setDhoniBets(dhoniBets + amount);
+      setRightBets(rightBets + amount);
     }
 
     // Deduct from wallet
-    setWalletBalance(walletBalance - amount);
+    const newBalance = walletBalance - amount;
+    setWalletBalance(newBalance);
     
-    toast.success(`Bet placed on ${selectedPlayer === 'virat' ? 'Virat' : 'Dhoni'}`);
+    // Update localStorage
+    localStorage.setItem('walletBalance', newBalance.toString());
+    
+    // Add transaction record
+    addTransaction("Game Bet", amount);
+    
+    toast.success(`Bet placed on ${selectedPlayer === 'left' ? leftPlayer.name : rightPlayer.name}`);
     setBetAmount('');
   };
 
   const determineWinner = () => {
     // Determine winner (player with LESS total bets)
-    let gameWinner: 'virat' | 'dhoni';
+    let gameWinner: 'left' | 'right';
     
-    if (viratBets <= dhoniBets) {
-      gameWinner = 'virat';
+    if (leftBets <= rightBets) {
+      gameWinner = 'left';
     } else {
-      gameWinner = 'dhoni';
+      gameWinner = 'right';
     }
     
     setWinner(gameWinner);
@@ -75,7 +141,15 @@ const CardGame = () => {
     // Pay winners
     if (selectedPlayer === gameWinner) {
       const winnings = parseFloat(betAmount) * 2;
-      setWalletBalance(walletBalance + winnings);
+      const newBalance = walletBalance + winnings;
+      setWalletBalance(newBalance);
+      
+      // Update localStorage
+      localStorage.setItem('walletBalance', newBalance.toString());
+      
+      // Add transaction record
+      addTransaction("Game Win", winnings);
+      
       toast.success(`You won ₹${winnings}!`);
     }
   };
@@ -84,10 +158,43 @@ const CardGame = () => {
     setSelectedPlayer(null);
     setBetAmount('');
     setTimeLeft(30);
-    setViratBets(0);
-    setDhoniBets(0);
+    setLeftBets(0);
+    setRightBets(0);
     setWinner(null);
     setGamePhase('betting');
+  };
+
+  const goToPlayerSelection = () => {
+    navigate('/player-selection');
+  };
+  
+  // Function to add transaction to history
+  const addTransaction = (type: string, amount: number) => {
+    // Get existing transactions
+    const storedTransactions = localStorage.getItem('transactions');
+    let transactions = [];
+    
+    if (storedTransactions) {
+      transactions = JSON.parse(storedTransactions);
+    }
+    
+    // Create new transaction
+    const now = new Date();
+    const dateString = now.toISOString().slice(0, 10) + ' ' + 
+                      now.getHours().toString().padStart(2, '0') + ':' + 
+                      now.getMinutes().toString().padStart(2, '0');
+                      
+    const newTransaction = {
+      id: Date.now(),
+      type,
+      amount,
+      date: dateString,
+      status: 'Success'
+    };
+    
+    // Add to transactions and save
+    const updatedTransactions = [newTransaction, ...transactions];
+    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
   };
 
   return (
@@ -99,7 +206,7 @@ const CardGame = () => {
           ← Back to Home
         </Link>
         
-        <h1 className="text-2xl font-bold text-center mb-4">Virat vs Dhoni</h1>
+        <h1 className="text-2xl font-bold text-center mb-4">{leftPlayer.name} vs {rightPlayer.name}</h1>
         
         {gamePhase === 'betting' ? (
           <>
@@ -109,37 +216,55 @@ const CardGame = () => {
             
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div 
-                className={`player-card ${selectedPlayer === 'virat' ? 'ring-2 ring-game-primary' : ''}`}
-                onClick={() => setSelectedPlayer('virat')}
+                className={`player-card relative ${selectedPlayer === 'left' ? 'ring-2 ring-game-primary' : ''}`}
+                onClick={() => setSelectedPlayer('left')}
               >
-                <div className="bg-blue-600 rounded-t-lg p-2 text-center text-white font-bold">
-                  Virat Kohli
+                <div className={`${leftPlayer.color} rounded-t-lg p-2 text-center text-white font-bold`}>
+                  {leftPlayer.name}
                 </div>
                 <div className="bg-white p-3 flex items-center justify-center">
                   <img 
-                    src="https://documents.iplt20.com/ipl/IPLHeadshot2025/2.png" 
-                    alt="Virat Kohli" 
-                    className="h-36" 
+                    src={leftPlayer.image} 
+                    alt={leftPlayer.name} 
+                    className="h-36 object-contain" 
                   />
                 </div>
-                <div className="betting-badge">Total: ₹{viratBets}</div>
+                <div className="betting-badge">Total: ₹{leftBets}</div>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToPlayerSelection();
+                  }}
+                  className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-md"
+                >
+                  <Edit2 size={16} className="text-gray-600" />
+                </button>
               </div>
               
               <div 
-                className={`player-card ${selectedPlayer === 'dhoni' ? 'ring-2 ring-game-primary' : ''}`}
-                onClick={() => setSelectedPlayer('dhoni')}
+                className={`player-card relative ${selectedPlayer === 'right' ? 'ring-2 ring-game-primary' : ''}`}
+                onClick={() => setSelectedPlayer('right')}
               >
-                <div className="bg-yellow-500 rounded-t-lg p-2 text-center text-white font-bold">
-                  MS Dhoni
+                <div className={`${rightPlayer.color} rounded-t-lg p-2 text-center text-white font-bold`}>
+                  {rightPlayer.name}
                 </div>
                 <div className="bg-white p-3 flex items-center justify-center">
                   <img 
-                    src="https://i.pinimg.com/236x/08/d1/bd/08d1bd467b5e3b22d44b07df0dc173c2.jpg" 
-                    alt="MS Dhoni" 
-                    className="h-36" 
+                    src={rightPlayer.image} 
+                    alt={rightPlayer.name} 
+                    className="h-36 object-contain" 
                   />
                 </div>
-                <div className="betting-badge">Total: ₹{dhoniBets}</div>
+                <div className="betting-badge">Total: ₹{rightBets}</div>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToPlayerSelection();
+                  }}
+                  className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-md"
+                >
+                  <Edit2 size={16} className="text-gray-600" />
+                </button>
               </div>
             </div>
             
@@ -164,7 +289,7 @@ const CardGame = () => {
               
               <div className="mt-3 text-sm text-gray-500">
                 <p>Your balance: ₹{walletBalance}</p>
-                <p>Selected: {selectedPlayer ? (selectedPlayer === 'virat' ? 'Virat Kohli' : 'MS Dhoni') : 'None'}</p>
+                <p>Selected: {selectedPlayer ? (selectedPlayer === 'left' ? leftPlayer.name : rightPlayer.name) : 'None'}</p>
               </div>
             </div>
           </>
@@ -174,11 +299,9 @@ const CardGame = () => {
             
             <div className="relative h-40 mb-4">
               <img 
-                src={winner === 'virat' 
-                  ? "https://documents.iplt20.com/ipl/IPLHeadshot2025/2.png"
-                  : "https://i.pinimg.com/236x/08/d1/bd/08d1bd467b5e3b22d44b07df0dc173c2.jpg"} 
-                alt={winner === 'virat' ? "Virat Kohli" : "MS Dhoni"} 
-                className="h-full mx-auto"
+                src={winner === 'left' ? leftPlayer.image : rightPlayer.image} 
+                alt={winner === 'left' ? leftPlayer.name : rightPlayer.name} 
+                className="h-full mx-auto object-contain"
               />
               <div className="absolute top-0 left-0 right-0 bg-game-accent text-game-dark py-1 font-bold">
                 WINNER!
@@ -186,17 +309,17 @@ const CardGame = () => {
             </div>
             
             <p className="text-lg font-bold mb-4">
-              {winner === 'virat' ? 'Virat Kohli' : 'MS Dhoni'} Won!
+              {winner === 'left' ? leftPlayer.name : rightPlayer.name} Won!
             </p>
             
             <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
               <div className="bg-gray-50 p-2 rounded">
-                <p className="font-bold">Virat Bets</p>
-                <p>₹{viratBets}</p>
+                <p className="font-bold">{leftPlayer.name} Bets</p>
+                <p>₹{leftBets}</p>
               </div>
               <div className="bg-gray-50 p-2 rounded">
-                <p className="font-bold">Dhoni Bets</p>
-                <p>₹{dhoniBets}</p>
+                <p className="font-bold">{rightPlayer.name} Bets</p>
+                <p>₹{rightBets}</p>
               </div>
             </div>
             

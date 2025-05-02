@@ -12,6 +12,7 @@ import ComingSoon from "./pages/ComingSoon";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Wallet from "./pages/Wallet";
+import PlayerSelection from "./pages/PlayerSelection";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/wallet" element={<Wallet />} />
+          <Route path="/player-selection" element={<PlayerSelection />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
