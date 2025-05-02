@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,8 +8,7 @@ import NotFound from "./pages/NotFound";
 import CardGame from "./pages/CardGame";
 import WheelSpin from "./pages/WheelSpin";
 import ComingSoon from "./pages/ComingSoon";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import { SignIn, SignUp, SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 import Wallet from "./pages/Wallet";
 import PlayerSelection from "./pages/PlayerSelection";
 
@@ -24,13 +22,49 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/card-game" element={<CardGame />} />
+          <Route
+            path="/card-game"
+            element={
+              <>
+                <SignedIn>
+                  <CardGame />
+                </SignedIn>
+                <SignedOut>
+                  <RedirectToSignIn />
+                </SignedOut>
+              </>
+            }
+          />
           <Route path="/wheel-spin" element={<WheelSpin />} />
           <Route path="/coming-soon" element={<ComingSoon />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/wallet" element={<Wallet />} />
-          <Route path="/player-selection" element={<PlayerSelection />} />
+          <Route path="/login" element={<SignIn />} />
+          <Route path="/register" element={<SignUp />} />
+          <Route
+            path="/wallet"
+            element={
+              <>
+                <SignedIn>
+                  <Wallet />
+                </SignedIn>
+                <SignedOut>
+                  <RedirectToSignIn />
+                </SignedOut>
+              </>
+            }
+          />
+          <Route
+            path="/player-selection"
+            element={
+              <>
+                <SignedIn>
+                  <PlayerSelection />
+                </SignedIn>
+                <SignedOut>
+                  <RedirectToSignIn />
+                </SignedOut>
+              </>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

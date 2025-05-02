@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Wallet } from 'lucide-react';
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
 
 const AppHeader = () => {
   const [walletBalance, setWalletBalance] = useState(0);
@@ -61,16 +62,16 @@ const AppHeader = () => {
             <Wallet className="w-4 h-4 mr-2" />
             <span>₹{walletBalance}</span>
           </Link>
-          <Link to="/login">
-            <Button variant="outline" size="sm" className="bg-game-accent text-game-dark border-none hover:bg-game-accent/80">
-              Login
-            </Button>
-          </Link>
-          <Link to="/register">
-            <Button variant="outline" size="sm" className="bg-white text-game-primary border-none hover:bg-white/90">
-              Register
-            </Button>
-          </Link>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button variant="outline" size="sm" className="bg-game-accent text-game-dark border-none hover:bg-game-accent/80">
+                Login
+              </Button>
+            </SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <UserButton />
+          </SignedIn>
         </div>
       </div>
     </header>
