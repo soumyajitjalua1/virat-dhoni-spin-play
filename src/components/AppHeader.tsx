@@ -49,11 +49,11 @@ const AppHeader = () => {
     <header className="bg-game-primary text-white py-3 px-4 sticky top-0 z-50">
       <div className="flex justify-between items-center">
         <Link to="/" className="flex items-center">
-          <div className="p-1 rounded-md bg-gradient-to-r from-blue-600 to-blue-400 shadow-md">
+          <div className="">
             <img
-              src="/RichBig.png"
+              src="/Richbig logo.png"
               alt="Logo"
-              className="h-16 w-auto" // bigger logo
+              className="h-10 w-auto" // bigger logo
             />
           </div>
         </Link>
