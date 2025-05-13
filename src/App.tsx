@@ -11,7 +11,19 @@ import ComingSoon from "./pages/ComingSoon";
 import { SignIn, SignUp, SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 import Wallet from "./pages/Wallet";
 import PlayerSelection from "./pages/PlayerSelection";
-
+import MobilePopups from "./components/MobilePopups"; // ✅ Import popup component
+import GameSection from "@/components/GameSection";
+import { popularGames } from "./pages/popularGames";
+import { casinoGames } from "./pages/casinoGames";
+import ActivityPage from "./pages/ActivityPage";
+import Promotion from "./pages/Promotion";
+import InvitationRules from "./pages/InvitationRules";
+import CommissionDetails from "./pages/CommissionDetails";
+import RebateRatio from "./pages/RebateRatio";
+import ActivityAward from "./pages/ActivityAward";
+import Rebate from "./pages/Rebate";
+import SuperJackpotPage from "./pages/SuperJackpotPage";
+import ActivityDetailsPage from "./pages/ActivityDetailsPage";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -20,6 +32,10 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <SignedIn>
+          <MobilePopups /> {/* ✅ Show popup for signed-in users */}
+        </SignedIn>
+
         <Routes>
           <Route path="/" element={<Index />} />
           <Route
@@ -35,10 +51,30 @@ const App = () => (
               </>
             }
           />
+          <Route
+          path="/popular"
+          element={<GameSection title="Popular Games" games={popularGames} />}
+        />
+        <Route
+          path="/casino"
+          element={<GameSection title="Casino Games" games={casinoGames} />}
+        />
           <Route path="/wheel-spin" element={<WheelSpin />} />
           <Route path="/coming-soon" element={<ComingSoon />} />
           <Route path="/login" element={<SignIn />} />
           <Route path="/register" element={<SignUp />} />
+          <Route path="/activity" element={<ActivityPage />} />
+          <Route path="/promotion" element={<Promotion />} />
+          <Route path="/invitation-rules" element={<InvitationRules />} />
+          <Route path="/commission-details" element={<CommissionDetails />} />
+          <Route path="/rebate-ratio" element={<RebateRatio />} />
+          <Route path="/activity-award" element={<ActivityAward />} />
+          <Route path="/rebate" element={<Rebate />} />
+          <Route path="/super-jackpot" element={<SuperJackpotPage />} />
+          <Route
+            path="/activity-details/:id"
+            element={<ActivityDetailsPage />}
+          />
           <Route
             path="/wallet"
             element={
@@ -52,6 +88,7 @@ const App = () => (
               </>
             }
           />
+
           <Route
             path="/player-selection"
             element={

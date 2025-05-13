@@ -1,31 +1,27 @@
-
-import React from 'react';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import React, { useEffect, useState } from "react";
 
 interface GameBannerProps {
   images: string[];
 }
 
-const GameBanner = ({ images }: GameBannerProps) => {
+const GameBanner: React.FC<GameBannerProps> = ({ images }) => {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % images.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [images.length]);
+
   return (
-    <div className="w-full py-2 px-1">
-      <Carousel className="w-full">
-        <CarouselContent>
-          {images.map((image, index) => (
-            <CarouselItem key={index}>
-              <div className="p-1">
-                <img 
-                  src={image} 
-                  alt={`Banner ${index + 1}`} 
-                  className="rounded-lg w-full h-40 object-cover" 
-                />
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        <CarouselPrevious className="hidden sm:flex" />
-        <CarouselNext className="hidden sm:flex" />
-      </Carousel>
+    <div className="w-full flex justify-center items-center overflow-hidden rounded-xl mb-4" style={{ height: 180,marginTop: 9 }}>
+      <img
+        src={images[current]}
+        alt={`Banner ${current + 1}`}
+        className="object-cover w-full h-full transition-all duration-700"
+        style={{ maxHeight: 180 }}
+      />
     </div>
   );
 };

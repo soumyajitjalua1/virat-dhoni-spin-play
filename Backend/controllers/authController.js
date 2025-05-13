@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const User = require('../middleware/auth');
 const bcrypt = require('bcrypt');
 
 exports.register = async (req, res) => {

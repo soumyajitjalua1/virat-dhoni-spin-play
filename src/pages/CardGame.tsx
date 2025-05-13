@@ -1,4 +1,4 @@
-// CardGame.tsx (Updated with improved shuffling and design)
+// CardGame.tsx (Enhanced with improved game mechanics and UI)
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppHeader from '@/components/AppHeader';
-import { Edit2, Trophy, Clock, Check, X, PartyPopper } from 'lucide-react';
+import { Edit2, Trophy, Clock, Check, X, PartyPopper, Star } from 'lucide-react';
 
 // Define player interface
 interface Player {
@@ -24,12 +24,11 @@ const CardGame = () => {
   const [betAmount, setBetAmount] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState<number>(30);
   const [gamePhase, setGamePhase] = useState<'betting' | 'shuffling' | 'results'>('betting');
-  const [leftBets, setLeftBets] = useState<number>(0);
-  const [rightBets, setRightBets] = useState<number>(0);
   const [winner, setWinner] = useState<'left' | 'right' | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [shuffleTimeLeft, setShuffleTimeLeft] = useState<number>(10);
   const shuffleTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [gamesPlayed, setGamesPlayed] = useState<number>(0);
   
   // Card backside image
   const cardBackside = "https://i.pinimg.com/474x/d6/6f/fd/d66ffd7836903e90c99f04c2ce0e3888.jpg";
@@ -62,21 +61,45 @@ const CardGame = () => {
     const storedRightPlayer = localStorage.getItem('rightPlayer');
     
     if (storedLeftPlayer) {
-      setLeftPlayer(JSON.parse(storedLeftPlayer));
+      try {
+        setLeftPlayer(JSON.parse(storedLeftPlayer));
+      } catch (e) {
+        console.error("Failed to parse leftPlayer:", e);
+      }
     }
     
     if (storedRightPlayer) {
-      setRightPlayer(JSON.parse(storedRightPlayer));
+      try {
+        setRightPlayer(JSON.parse(storedRightPlayer));
+      } catch (e) {
+        console.error("Failed to parse rightPlayer:", e);
+      }
     }
     
     // Load wallet balance
     const storedBalance = localStorage.getItem('walletBalance');
     if (storedBalance) {
-      setWalletBalance(parseInt(storedBalance));
+      const parsedBalance = parseInt(storedBalance);
+      if (!isNaN(parsedBalance)) {
+        setWalletBalance(parsedBalance);
+      } else {
+        // Fallback to default balance if parsing fails
+        localStorage.setItem('walletBalance', '1000');
+        setWalletBalance(1000);
+      }
     } else {
       // Set default balance if none exists
       localStorage.setItem('walletBalance', '1000');
       setWalletBalance(1000);
+    }
+    
+    // Load games played count
+    const storedGamesPlayed = localStorage.getItem('gamesPlayed');
+    if (storedGamesPlayed) {
+      const parsedGamesPlayed = parseInt(storedGamesPlayed);
+      if (!isNaN(parsedGamesPlayed)) {
+        setGamesPlayed(parsedGamesPlayed);
+      }
     }
   }, []);
 
@@ -138,20 +161,8 @@ const CardGame = () => {
       return;
     }
 
-    // Update bet totals
-    if (selectedPlayer === 'left') {
-      setLeftBets(leftBets + amount);
-      
-      // Bot places bet on the right player (opposite of user)
-      const botBetAmount = calculateBotBetAmount(amount);
-      setRightBets(rightBets + botBetAmount);
-    } else {
-      setRightBets(rightBets + amount);
-      
-      // Bot places bet on the left player (opposite of user)
-      const botBetAmount = calculateBotBetAmount(amount);
-      setLeftBets(leftBets + botBetAmount);
-    }
+    // Store the bet amount for later use (important for determining winnings)
+    localStorage.setItem('currentBetAmount', amount.toString());
 
     // Deduct from wallet
     const newBalance = walletBalance - amount;
@@ -164,28 +175,34 @@ const CardGame = () => {
     addTransaction("Game Bet", amount);
     
     toast.success(`Bet placed on ${selectedPlayer === 'left' ? leftPlayer.name : rightPlayer.name}`);
-    setBetAmount('');
-  };
-
-  // Calculate bot bet amount (always less than user bet)
-  const calculateBotBetAmount = (userBet: number): number => {
-    return Math.max(1, Math.floor(userBet * 0.8));
   };
 
   const determineWinner = () => {
-    // Determine winner based on the specified win chances
-    let userWins = false;
-    const userBetAmount = parseFloat(betAmount);
-    const randomChance = Math.random();
+    // Update games played counter
+    const newGamesPlayed = gamesPlayed + 1;
+    setGamesPlayed(newGamesPlayed);
+    localStorage.setItem('gamesPlayed', newGamesPlayed.toString());
     
-    if (userBetAmount < 10) {
-      userWins = randomChance < 0.6; // 60% chance
-    } else if (userBetAmount >= 10 && userBetAmount < 50) {
-      userWins = randomChance < 0.4; // 40% chance
-    } else if (userBetAmount >= 50 && userBetAmount < 100) {
-      userWins = randomChance < 0.1; // 10% chance
+    let userWins = false;
+    
+    // First 3 games: User must win at least one (preferably first or second)
+    if (newGamesPlayed <= 3) {
+      if (newGamesPlayed === 1) {
+        userWins = true; // First game - user wins
+      } else if (newGamesPlayed === 2) {
+        // 70% chance to win second game
+        userWins = Math.random() < 0.7;
+      } else {
+        // Third game - if user hasn't won previous games, ensure a win
+        const hasWonBefore = localStorage.getItem('hasWonFirstThree') === 'true';
+        userWins = !hasWonBefore;
+        if (userWins) {
+          localStorage.setItem('hasWonFirstThree', 'true');
+        }
+      }
     } else {
-      userWins = randomChance < 0.001; // 0.1% chance
+      // After 3 games, very low winning chance
+      userWins = Math.random() < 0.002; // 0.2% chance to win
     }
     
     // Set winner based on calculation
@@ -200,9 +217,12 @@ const CardGame = () => {
     setWinner(gameWinner);
     setGamePhase('results');
     
+    // Make sure bet amount is valid 
+    const betAmountValue = parseFloat(betAmount) || 0;
+    
     // Pay winners
     if (selectedPlayer === gameWinner) {
-      const winnings = parseFloat(betAmount) * 2;
+      const winnings = betAmountValue * 2;
       const newBalance = walletBalance + winnings;
       setWalletBalance(newBalance);
       
@@ -214,7 +234,7 @@ const CardGame = () => {
       
       toast.success(`You won ₹${winnings}!`);
     } else {
-      toast.error(`You lost ₹${betAmount}!`);
+      toast.error(`You lost your bet!`);
     }
   };
 
@@ -223,8 +243,6 @@ const CardGame = () => {
     setBetAmount('');
     setTimeLeft(30);
     setShuffleTimeLeft(10);
-    setLeftBets(0);
-    setRightBets(0);
     setWinner(null);
     setGamePhase('betting');
   };
@@ -269,15 +287,15 @@ const CardGame = () => {
     
     return {
       mainClass: `h-full w-full rounded-lg overflow-hidden shadow-lg transition-all duration-300 transform ${
-        isSelected ? 'ring-2 ring-game-primary scale-105' : ''
+        isSelected ? 'ring-4 ring-game-primary scale-105' : ''
       }`,
-      headerClass: `${player.color} h-4`,
-      footerClass: `p-2 ${player.color} text-white text-center`
+      headerClass: `${player.color} `,
+      footerClass: `p-3 ${player.color} text-white text-center`
     };
   };
 
   return (
-    <div className={`min-h-screen pb-6 bg-gradient-to-b from-gray-100 to-gray-200`}>
+    <div className={`min-h-screen pb-6 bg-gradient-to-b from-indigo-50 to-blue-100`}>
       <AppHeader />
       
       <div className="p-4 max-w-md mx-auto">
@@ -285,14 +303,18 @@ const CardGame = () => {
           ← Back to Home
         </Link>
         
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-4">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-3 text-white">
-            <h1 className="text-2xl font-bold text-center">Card Game</h1>
+        <div className="bg-white rounded-lg shadow-xl overflow-hidden mb-4 border border-indigo-100">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white flex items-center justify-between">
+            <h1 className="text-2xl font-bold">Card Game</h1>
+            <div className="flex items-center bg-white bg-opacity-20 rounded-lg px-3 py-1 text-sm">
+              <p className="mr-1">Balance:</p>
+              <p className="font-bold">₹{walletBalance}</p>
+            </div>
           </div>
           
           {gamePhase === 'betting' && (
-            <div className="flex justify-center ">
-              <div className="timer-circle w-16 h-16 rounded-full bg-white border-4 border-game-primary flex items-center justify-center shadow-md">
+            <div className="flex justify-center -mt-5">
+              <div className="timer-circle w-16 h-16 rounded-full bg-white border-4 border-game-primary flex items-center justify-center shadow-lg">
                 <div className="flex items-center font-bold text-game-primary">
                   <Clock size={16} className="mr-1" /> {timeLeft}s
                 </div>
@@ -302,7 +324,7 @@ const CardGame = () => {
           
           {gamePhase === 'shuffling' && (
             <div className="flex justify-center -mt-5">
-              <div className="timer-circle w-16 h-16 rounded-full bg-white border-4 border-red-500 flex items-center justify-center shadow-md">
+              <div className="timer-circle w-16 h-16 rounded-full bg-white border-4 border-red-500 flex items-center justify-center shadow-lg">
                 <div className="flex items-center font-bold text-red-500">
                   <Clock size={16} className="mr-1" /> {shuffleTimeLeft}s
                 </div>
@@ -311,7 +333,7 @@ const CardGame = () => {
           )}
           
           {gamePhase === 'betting' && (
-            <div className="grid grid-cols-2 gap-4 p-4">
+            <div className="grid grid-cols-2 gap-4 p-6">
               <div 
                 className="h-64 cursor-pointer relative"
                 onClick={() => setSelectedPlayer('left')}
@@ -322,11 +344,11 @@ const CardGame = () => {
                   <div className={getCardClasses('left').headerClass}></div>
                   
                   {/* Card Body - Player Image with team color background */}
-                  <div className={`flex items-center justify-center p-3 h-48 ${leftPlayer.color}`}>
+                  <div className={`flex items-center justify-center p-3 h-48 ${leftPlayer.color} from-${leftPlayer.color.split('-')[1]}-700 to-${leftPlayer.color.split('-')[1]}-600`}>
                     <img 
                       src={leftPlayer.image} 
                       alt={leftPlayer.name} 
-                      className="h-40 object-contain" 
+                      className="h-40 object-contain drop-shadow-lg" 
                     />
                   </div>
                   
@@ -335,11 +357,6 @@ const CardGame = () => {
                     <p className="font-bold text-sm">{leftPlayer.name}</p>
                     <p className="text-xs opacity-90">{leftPlayer.team}</p>
                   </div>
-                </div>
-                
-                {/* Bet Badge */}
-                <div className="absolute top-2 right-2 bg-game-primary text-white text-xs px-2 py-1 rounded-full">
-                  ₹{leftBets}
                 </div>
                 
                 {/* Edit Button */}
@@ -371,11 +388,11 @@ const CardGame = () => {
                   <div className={getCardClasses('right').headerClass}></div>
                   
                   {/* Card Body - Player Image with team color background */}
-                  <div className={`flex items-center justify-center p-3 h-48 ${rightPlayer.color} `}>
+                  <div className={`flex items-center justify-center p-3 h-48 ${rightPlayer.color}  from-${rightPlayer.color.split('-')[1]}-700 to-${rightPlayer.color.split('-')[1]}-600`}>
                     <img 
                       src={rightPlayer.image} 
                       alt={rightPlayer.name} 
-                      className="h-40 object-contain" 
+                      className="h-40 object-contain drop-shadow-lg" 
                     />
                   </div>
                   
@@ -384,11 +401,6 @@ const CardGame = () => {
                     <p className="font-bold text-sm">{rightPlayer.name}</p>
                     <p className="text-xs opacity-90">{rightPlayer.team}</p>
                   </div>
-                </div>
-                
-                {/* Bet Badge */}
-                <div className="absolute top-2 right-2 bg-game-primary text-white text-xs px-2 py-1 rounded-full">
-                  ₹{rightBets}
                 </div>
                 
                 {/* Edit Button */}
@@ -439,65 +451,55 @@ const CardGame = () => {
           )}
           
           {gamePhase === 'results' && (
-            <div className="p-4 text-center">
+            <div className="p-6 text-center">
               {selectedPlayer === winner ? (
                 /* User won animation */
-                <div className="mb-4 relative celebration-animation">
-                  <PartyPopper className="absolute top-0 left-1/4 text-yellow-500 animate-bounce" size={24} />
-                  <PartyPopper className="absolute top-0 right-1/4 text-yellow-500 animate-bounce" size={24} />
+                <div className="mb-6 relative celebration-animation">
+                  <PartyPopper className="absolute top-0 left-1/4 text-yellow-500 animate-bounce" size={28} />
+                  <PartyPopper className="absolute top-0 right-1/4 text-yellow-500 animate-bounce" size={28} />
+                  <Star className="absolute top-10 left-1/3 text-yellow-400 animate-pulse" size={24} />
+                  <Star className="absolute top-10 right-1/3 text-yellow-400 animate-pulse" size={24} />
                   
                   <img 
                     src={winner === 'left' ? leftPlayer.image : rightPlayer.image} 
                     alt={winner === 'left' ? leftPlayer.name : rightPlayer.name} 
-                    className="h-40 mx-auto object-contain winner-animation" 
+                    className="h-48 mx-auto object-contain winner-animation" 
                   />
                   
-                  <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 font-bold animate-pulse">
-                    <Trophy size={20} className="inline-block mr-1" /> CONGRATULATIONS!
+                  <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-3 font-bold animate-pulse rounded-t-lg">
+                    <Trophy size={24} className="inline-block mr-2" /> CONGRATULATIONS!
                   </div>
                 </div>
               ) : (
                 /* User lost animation */
-                <div className="mb-4 relative">
+                <div className="mb-6 relative">
                   <img 
                     src={winner === 'left' ? leftPlayer.image : rightPlayer.image} 
                     alt={winner === 'left' ? leftPlayer.name : rightPlayer.name} 
-                    className="h-40 mx-auto object-contain" 
+                    className="h-48 mx-auto object-contain loser-animation" 
                   />
                   
-                  <div className="absolute top-0 left-0 right-0 bg-red-500 text-white py-2 font-bold">
-                    <X size={20} className="inline-block mr-1" /> BETTER LUCK NEXT TIME
+                  <div className="absolute top-0 left-0 right-0 bg-red-500 text-white py-3 font-bold rounded-t-lg">
+                    <X size={24} className="inline-block mr-2" /> BETTER LUCK NEXT TIME
                   </div>
                 </div>
               )}
               
-              <p className="text-lg font-bold mb-4">
+              <p className="text-xl font-bold mb-6 text-indigo-900">
                 {winner === 'left' ? leftPlayer.name : rightPlayer.name} Won!
               </p>
               
-              <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                <div className={`${leftPlayer.color} text-white p-3 rounded-lg`}>
-                  <p className="font-bold">{leftPlayer.name}</p>
-                  <p>₹{leftBets}</p>
-                </div>
-                <div className={`${rightPlayer.color} text-white p-3 rounded-lg`}>
-                  <p className="font-bold">{rightPlayer.name}</p>
-                  <p>₹{rightBets}</p>
-                </div>
-              </div>
-              
-              <div className={`p-3 mb-4 rounded-lg ${selectedPlayer === winner ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              <div className={`p-4 mb-4 rounded-lg ${selectedPlayer === winner ? 'bg-green-100 text-green-800 border-2 border-green-300' : 'bg-red-100 text-red-800 border-2 border-red-300'}`}>
                 {selectedPlayer === winner ? (
                   <div>
-                    <p className="font-bold">Congratulations!</p>
-                    <p>You won ₹{parseFloat(betAmount) * 2}</p>
-                    <p className="text-xs mt-1">+₹{parseFloat(betAmount) * 2} added to your wallet</p>
+                    <p className="font-bold text-lg">Congratulations!</p>
+                    <p className="text-2xl font-bold mt-2">You won ₹{(parseFloat(betAmount) || 0) * 2}</p>
+                    <p className="mt-2">Your prize has been added to your wallet</p>
                   </div>
                 ) : (
                   <div>
-                    <p className="font-bold">Better luck next time!</p>
-                    <p>You lost ₹{betAmount}</p>
-                    <p className="text-xs mt-1">Don't worry, try again with a different strategy!</p>
+                    <p className="font-bold text-lg">Better luck next time!</p>
+                    <p className="text-lg mt-2">Try again with a different strategy!</p>
                   </div>
                 )}
               </div>
@@ -505,8 +507,8 @@ const CardGame = () => {
           )}
           
           {gamePhase === 'betting' && (
-            <div className="p-4 bg-gray-50 border-t border-gray-200">
-              <h2 className="text-lg font-bold mb-2 flex items-center">
+            <div className="p-4 bg-indigo-50 border-t border-indigo-100">
+              <h2 className="text-lg font-bold mb-3 flex items-center text-indigo-900">
                 <span className="w-2 h-6 bg-game-primary mr-2 rounded"></span>
                 Place Your Bet
               </h2>
@@ -516,11 +518,11 @@ const CardGame = () => {
                   placeholder="Enter bet amount" 
                   value={betAmount}
                   onChange={(e) => setBetAmount(e.target.value)}
-                  className="bg-white border-2 focus:border-game-primary"
+                  className="bg-white border-2 focus:border-game-primary text-lg p-6 rounded-lg shadow-sm"
                 />
                 <Button 
                   onClick={placeBet} 
-                  className={`bg-game-primary hover:bg-game-primary/80 transition-all ${
+                  className={`bg-game-primary hover:bg-game-primary/80 transition-all text-lg py-6 rounded-lg shadow-md ${
                     !selectedPlayer || !betAmount ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   disabled={!selectedPlayer || !betAmount}
@@ -529,17 +531,13 @@ const CardGame = () => {
                 </Button>
               </div>
               
-              <div className="mt-4 flex justify-between items-center text-sm">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
-                  <p>Balance: ₹{walletBalance}</p>
-                </div>
+              <div className="mt-4 flex justify-center items-center text-sm">
                 <div>
-                  <p className="font-medium">
+                  <p className="font-medium text-center text-indigo-900">
                     {selectedPlayer ? (
                       <>Selected: {selectedPlayer === 'left' ? leftPlayer.name : rightPlayer.name}</>
                     ) : (
-                      <>Select a player</>
+                      <>Select a player to continue</>
                     )}
                   </p>
                 </div>
@@ -548,10 +546,10 @@ const CardGame = () => {
           )}
           
           {gamePhase === 'results' && (
-            <div className="p-4 bg-gray-50 border-t border-gray-200">
+            <div className="p-4 bg-indigo-50 border-t border-indigo-100">
               <Button 
                 onClick={startNewGame} 
-                className="bg-game-primary hover:bg-game-primary/80 w-full transition-transform hover:scale-105"
+                className="bg-game-primary hover:bg-game-primary/80 w-full transition-transform hover:scale-105 py-6 text-lg rounded-lg shadow-lg"
               >
                 Play Again
               </Button>
@@ -559,16 +557,16 @@ const CardGame = () => {
           )}
         </div>
         
-        {/* Win chance info card */}
+        {/* Enhanced win chance info card - simplified for users */}
         {gamePhase === 'betting' && (
-          <div className="bg-white rounded-lg shadow-md p-4 text-sm">
-            <h3 className="font-bold mb-2 text-game-primary">Win Chances</h3>
-            <ul className="space-y-1 text-gray-700">
-              <li>• Bet &lt;₹10: Higher chance to win! (60%)</li>
-              <li>• Bet ₹10-₹50: Good chance to win (40%)</li>
-              <li>• Bet ₹50-₹100: Lower chance to win (10%)</li>
-              <li>• Bet &gt;₹100: Very low chance to win (0.1%)</li>
-            </ul>
+          <div className="bg-white rounded-lg shadow-lg p-4 border border-indigo-100">
+            <div className="flex items-center mb-2">
+              <Trophy size={18} className="text-yellow-500 mr-2" />
+              <h3 className="font-bold text-indigo-900">Double Your Money!</h3>
+            </div>
+            <p className="text-gray-700 text-sm">
+              Select your favorite player and place your bet. If your player wins, you'll receive double your bet amount instantly!
+            </p>
           </div>
         )}
       </div>
@@ -576,21 +574,23 @@ const CardGame = () => {
       {/* CSS for animations */}
       <style >{`
         @keyframes shuffle-left {
-          0% { left: -50%; }
-          100% { left: 100%; }
+          0% { left: -50%; opacity: 0.8; transform: rotate(-5deg); }
+          50% { opacity: 1; transform: rotate(5deg); }
+          100% { left: 100%; opacity: 0.8; transform: rotate(-5deg); }
         }
         
         @keyframes shuffle-right {
-          0% { right: -50%; }
-          100% { right: 100%; }
+          0% { right: -50%; opacity: 0.8; transform: rotate(5deg); }
+          50% { opacity: 1; transform: rotate(-5deg); }
+          100% { right: 100%; opacity: 0.8; transform: rotate(5deg); }
         }
         
         .card-shuffle-left {
-          animation: shuffle-left 2s linear infinite;
+          animation: shuffle-left 1.5s linear infinite;
         }
         
         .card-shuffle-right {
-          animation: shuffle-right 2s linear infinite;
+          animation: shuffle-right 1.5s linear infinite;
         }
         
         @keyframes winner-animation {
@@ -603,11 +603,20 @@ const CardGame = () => {
           animation: winner-animation 1s ease-out;
         }
         
+        @keyframes loser-animation {
+          0% { transform: scale(1); filter: grayscale(0); }
+          100% { transform: scale(0.95); filter: grayscale(40%); }
+        }
+        
+        .loser-animation {
+          animation: loser-animation 1s ease-out forwards;
+        }
+        
         @keyframes celebration {
-          0% { transform: rotate(-10deg); }
-          25% { transform: rotate(10deg); }
-          50% { transform: rotate(-5deg); }
-          75% { transform: rotate(5deg); }
+          0% { transform: rotate(-5deg); }
+          25% { transform: rotate(5deg); }
+          50% { transform: rotate(-3deg); }
+          75% { transform: rotate(3deg); }
           100% { transform: rotate(0); }
         }
         

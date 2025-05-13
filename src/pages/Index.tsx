@@ -4,9 +4,11 @@ import GameNavigation from '@/components/GameNavigation';
 import GameBanner from '@/components/GameBanner';
 import FeaturedGames from '@/components/FeaturedGames';
 import GameSection from '@/components/GameSection';
-import WinnerDisplay from '@/components/WinnerDisplay';
+import WinnerDisplay from '@/components/WinningInfo';
 import FooterNavigation from '@/components/FooterNavigation';
-
+import EarningLeaderboard from '@/components/EarningLeaderboard';
+import TirangaInfoSection from '@/components/RichbigInfoSection';
+import HelpMenuSection from '@/components/HelpMenuSection';
 const bannerImages = [
   "https://www.pocket52.com/_ipx/s_2400x1200/images/landing-pages/poker-rules-resized.webp",
   "https://i0.wp.com/bonaccordaberdeen.com/wp-content/uploads/2023/01/Game-ready-to-play-504x336-1.webp?fit=504%2C336&ssl=1",
@@ -35,18 +37,37 @@ const casinoGames = [
   { title: 'Poker', image: 'https://img.freepik.com/free-vector/realistic-casino-gambling-illustration_52683-99917.jpg?semt=ais_hybrid&w=740', path: '/coming-soon' }
 ];
 
+
 const Index = () => {
   return (
     <div className="min-h-screen pb-20">
       <AppHeader />
-      <GameNavigation />
       <GameBanner images={bannerImages} />
-      <FeaturedGames />
+      <GameNavigation />
+      <div className="px-2 py-4">
+        <h2 className="text-xl font-bold text-game-dark mb-2 ">On Going Game</h2>
+          <FeaturedGames />
+      </div>
+      {/* <FeaturedGames /> */}
       <GameSection title="Popular Games" games={popularGames} />
       <GameSection title="Casino Games" games={casinoGames} />
       <div className="px-2 py-4">
+        <h2 className="text-xl font-bold text-game-dark mb-2 ">Winning information</h2>
         <WinnerDisplay />
       </div>
+      <div className="px-2 py-4">
+        <h2 className="text-xl font-bold text-game-dark mb-2 ">Earning Leaderboard</h2>
+        <EarningLeaderboard />
+      </div>
+      <div className="px-2 py-4">
+        <h2 className="text-xl font-bold text-game-dark mb-2 ">Rich Big Info</h2>
+        <TirangaInfoSection />
+      </div>
+      <div className="px-2 py-4">
+        <h2 className="text-xl font-bold text-game-dark mb-2 ">Help Menu</h2>
+        <HelpMenuSection />
+      </div>
+
       <FooterNavigation />
     </div>
   );
