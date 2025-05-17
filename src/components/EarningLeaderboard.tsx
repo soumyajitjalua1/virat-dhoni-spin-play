@@ -38,7 +38,7 @@ const otherUsers = [
 
 const EarningLeaderboard: React.FC = () => {
   return (
-    <div className="p-4 w-full max-w-md mx-auto  text-white rounded-2xl shadow-lg">
+    <div className="p-4 w-full max-w-md mx-auto  text-white rounded-2xl ">
         
     
         {/* Top 3 users */}
@@ -75,32 +75,22 @@ const EarningLeaderboard: React.FC = () => {
         {otherUsers.map((user) => (
           <div
             key={user.rank}
-            className="flex justify-between items-center rounded-xl px-3 py-2" style={{ backgroundColor: "rgb(158 139 192)" }}
+            className="bg-gradient-to-br from-rose-200 to-pink-500 flex justify-between items-center rounded-xl px-3 py-2" 
           >
             <div className="flex items-center gap-2">
-              <span className="font-bold w-5">{user.rank}</span>
-              <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full" />
-              <span className="text-sm font-semibold">{user.name}</span>
+              <span className="text-blue-500 font-bold w-5">{user.rank}</span>
+              <img src={user.avatar} alt={user.name} className="text-blue-500 w-8 h-8 rounded-full" />
+              <span className="text-blue-500 text-sm font-semibold">{user.name}</span>
             </div>
             <div className="flex items-center gap-2">
-              {/* {user.wheel && (
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Color_wheel_2012.svg/1200px-Color_wheel_2012.svg.png"
-                  alt="wheel"
-                  className="w-6 h-6"
-                />
-              )} */}
-              <span className="bg-blue-500 text-white rounded-full px-3 py-1 text-xs font-bold">
+              <span className=" bg-blue-500 text-white rounded-full px-3 py-1 text-xs font-bold">
                 {user.earnings}
               </span>
             </div>
           </div>
         ))}
 
-        {/* Floating help icon */}
-        {/* <div className="absolute bottom-2 right-2 bg-white text-blue-500 rounded-full p-2 shadow-lg">
-          <HelpCircle size={20} />
-        </div> */}
+        
       </div>
     </div>
   );

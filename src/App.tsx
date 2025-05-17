@@ -13,7 +13,7 @@ import Wallet from "./pages/Wallet";
 import PlayerSelection from "./pages/PlayerSelection";
 import MobilePopups from "./components/MobilePopups"; // ✅ Import popup component
 import GameSection from "@/components/GameSection";
-import { popularGames } from "./pages/popularGames";
+// import PopularGame from "./pages/PopularGames";
 import { casinoGames } from "./pages/casinoGames";
 import ActivityPage from "./pages/ActivityPage";
 import Promotion from "./pages/Promotion";
@@ -24,6 +24,10 @@ import ActivityAward from "./pages/ActivityAward";
 import Rebate from "./pages/Rebate";
 import SuperJackpotPage from "./pages/SuperJackpotPage";
 import ActivityDetailsPage from "./pages/ActivityDetailsPage";
+import PopularGame from "./pages/PopularGames";
+import AccountPage from "./pages/AccountPage";
+import GuessPlayerGame from "./pages/GuessPlayerGame";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -52,13 +56,26 @@ const App = () => (
             }
           />
           <Route
-          path="/popular"
-          element={<GameSection title="Popular Games" games={popularGames} />}
-        />
+            path="/popular"
+            element={<PopularGame />}
+          />
         <Route
           path="/casino"
           element={<GameSection title="Casino Games" games={casinoGames} />}
         />
+          <Route
+            path="/guess-player-game"
+            element={
+              <>
+                <SignedIn>
+                  <GuessPlayerGame />
+                </SignedIn>
+                <SignedOut>
+                  <RedirectToSignIn />
+                </SignedOut>
+              </>
+            }
+          />
           <Route path="/wheel-spin" element={<WheelSpin />} />
           <Route path="/coming-soon" element={<ComingSoon />} />
           <Route path="/login" element={<SignIn />} />
@@ -71,6 +88,7 @@ const App = () => (
           <Route path="/activity-award" element={<ActivityAward />} />
           <Route path="/rebate" element={<Rebate />} />
           <Route path="/super-jackpot" element={<SuperJackpotPage />} />
+          <Route path="/account" element={<AccountPage />} />
           <Route
             path="/activity-details/:id"
             element={<ActivityDetailsPage />}

@@ -45,21 +45,21 @@ const WinningInfo: React.FC = () => {
   }, [startIndex]);
 
   return (
-    <div className="p-4 rounded-xl shadow-md  text-white max-w-md mx-auto relative">
+    <div className="p-4 rounded-xl   text-white max-w-md mx-auto relative">
       <div className="space-y-2">
         {visibleUsers.map((user, index) => (
-          <div key={index} className="flex items-center justify-between  px-3 py-2 rounded-xl" style={{ backgroundColor: "rgb(120 124 159)" }}>
+          <div key={index} className="bg-gradient-to-br from-rose-200 to-pink-400 flex items-center justify-between  px-3 py-2 rounded-xl" >
             <div className="flex items-center gap-3">
               <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full" />
-              <span className="text-sm font-semibold">{user.name}</span>
+              <span className="text-sm font-semibold text-blue-600">{user.name}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center justify-center w-10 h-10 bg-[#2F47C2] rounded-full text-lg">
                 {user.gameIcon}
               </div>
               <div className="text-xs leading-tight text-right">
-                <div className="font-bold text-white">Receive {user.amount}</div>
-                <div className="text-[10px] text-gray-300">Winning amount</div>
+                <div className="font-bold text-blue-500">Receive {user.amount}</div>
+                <div className="text-[10px] text-blue-400">Winning amount</div>
               </div>
             </div>
           </div>

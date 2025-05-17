@@ -11,7 +11,7 @@ const gameLogos = [
 
 const TirangaInfoSection: React.FC = () => {
   return (
-    <div className="text-white rounded-xl p-5 max-w-md mx-auto space-y-4 shadow-md" style={{ backgroundColor: "rgb(75 168 162)" }}>
+    <div className="bg-gradient-to-br from-rose-200 to-pink-400 text-white rounded-xl p-5 max-w-md mx-auto space-y-4 shadow-md" >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="text-2xl font-bold text-white italic">
@@ -34,7 +34,7 @@ const TirangaInfoSection: React.FC = () => {
       </div>
 
       {/* Info bullets */}
-      <ul className="space-y-2 text-sm text-gray-100">
+      <ul className="space-y-2 text-sm text-blue-500">
         <li>🔹 The platform advocates fairness, justice, and openness. We mainly operate fair lottery, blockchain games, live casinos, and slot machine games.</li>
         <li>🔹 Tiranga works with more than 10,000 online live game and slot games, all of which are verified fair games.</li>
         <li>🔹 Tiranga supports fast deposit and withdrawal, and looks forward to your visit.</li>

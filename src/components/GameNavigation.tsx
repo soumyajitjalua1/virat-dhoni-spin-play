@@ -54,7 +54,7 @@ const categories = [
 ];
 
 const messages = [
-  "Welcome to the Tiranga Games! Greetings, Gamers and Enthusiasts!",
+  "Welcome to the Richbig Games! Greetings, Gamers and Enthusiasts!",
   "Play Safe, Win Big! The Tiranga Team Wishes You the Best!",
 ];
 
@@ -73,7 +73,7 @@ const GameNavigation: React.FC = () => {
   const thirdRow = categories.slice(5, 8);
 
   return (
-    <div className="p-3 w-full max-w-sm mx-auto">
+    <div className="w-full max-w-sm mx-auto">
       {/* Permanent top welcome bar with animated message */}
       <div className=" text-white rounded-2xl px-3 py-2 mb-4 shadow-md flex items-center justify-between" style={{ backgroundColor: "rgb(75 85 155)" }}>
         <motion.div

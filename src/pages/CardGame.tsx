@@ -21,12 +21,16 @@ const CardGame = () => {
   const navigate = useNavigate();
   const { toast: uiToast } = useToast();
   const [selectedPlayer, setSelectedPlayer] = useState<'left' | 'right' | null>(null);
+  const [playerSelection, setPlayerSelection] = useState<'left' | 'right' | null>(null); // For final player choice
   const [betAmount, setBetAmount] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState<number>(30);
-  const [gamePhase, setGamePhase] = useState<'betting' | 'shuffling' | 'results'>('betting');
+  const [timeLeft, setTimeLeft] = useState<number>(45); // Updated to 45 seconds
+  const [cardRotationPhase, setCardRotationPhase] = useState<boolean>(false);
+  const [showBackside, setShowBackside] = useState<boolean>(false);
+  const [gamePhase, setGamePhase] = useState<'initial' | 'cardRotation' | 'shuffling' | 'selection' | 'results'>('initial');
   const [winner, setWinner] = useState<'left' | 'right' | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [shuffleTimeLeft, setShuffleTimeLeft] = useState<number>(10);
+  const [selectionTimeLeft, setSelectionTimeLeft] = useState<number>(10);
   const shuffleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState<number>(0);
   
@@ -53,6 +57,7 @@ const CardGame = () => {
   // State for the players
   const [leftPlayer, setLeftPlayer] = useState<Player>(defaultLeftPlayer);
   const [rightPlayer, setRightPlayer] = useState<Player>(defaultRightPlayer);
+  const [finalCard, setFinalCard] = useState<'left' | 'right' | null>(null);
 
   // Load custom players and wallet balance from localStorage if available
   useEffect(() => {
@@ -103,16 +108,34 @@ const CardGame = () => {
     }
   }, []);
 
-  // Timer for betting phase
+  // Main game timer (45 seconds)
   useEffect(() => {
-    if (gamePhase === 'betting' && timeLeft > 0) {
+    if (timeLeft > 0) {
       const timerId = setTimeout(() => {
         setTimeLeft(timeLeft - 1);
+        
+        // After 7 seconds, start card rotation
+        if (timeLeft === 38 && gamePhase === 'initial') {
+          setGamePhase('cardRotation');
+          setCardRotationPhase(true);
+          
+          // Show backside after slight delay for animation
+          setTimeout(() => {
+            setShowBackside(true);
+          }, 500);
+          
+          // Start shuffling after 2 seconds
+          setTimeout(() => {
+            setGamePhase('shuffling');
+            setShuffleTimeLeft(10);
+          }, 2000);
+        }
       }, 1000);
       
       return () => clearTimeout(timerId);
-    } else if (gamePhase === 'betting' && timeLeft === 0) {
-      startShuffling();
+    } else {
+      // When timer reaches 0, automatically start new game
+      startNewGame();
     }
   }, [timeLeft, gamePhase]);
 
@@ -125,11 +148,30 @@ const CardGame = () => {
       
       return () => clearTimeout(timerId);
     } else if (gamePhase === 'shuffling' && shuffleTimeLeft === 0) {
-      determineWinner();
+      // After shuffling, show selection phase
+      setGamePhase('selection');
+      setSelectionTimeLeft(10);
+      
+      // Determine final card randomly but influenced by win chances
+      determineWinningCard();
     }
   }, [shuffleTimeLeft, gamePhase]);
+  
+  // Timer for selection phase
+  useEffect(() => {
+    if (gamePhase === 'selection' && selectionTimeLeft > 0) {
+      const timerId = setTimeout(() => {
+        setSelectionTimeLeft(selectionTimeLeft - 1);
+      }, 1000);
+      
+      return () => clearTimeout(timerId);
+    } else if (gamePhase === 'selection' && selectionTimeLeft === 0) {
+      // Time's up for selection, show results
+      finalizeGame();
+    }
+  }, [selectionTimeLeft, gamePhase]);
 
-  // Clean up shuffle timer when component unmounts
+  // Clean up timers
   useEffect(() => {
     return () => {
       if (shuffleTimerRef.current) {
@@ -138,18 +180,25 @@ const CardGame = () => {
     };
   }, []);
 
-  // Function to handle shuffling animation
-  const startShuffling = () => {
-    setGamePhase('shuffling');
-    setShuffleTimeLeft(10);
+  // Determine which card will win
+  const determineWinningCard = () => {
+    // Determine the final card that will be shown
+    setFinalCard(Math.random() < 0.5 ? 'left' : 'right');
+  };
+  
+  // Select player and place bet during selection phase
+  const selectPlayer = (player: 'left' | 'right') => {
+    if (gamePhase !== 'selection') return;
+    
+    setPlayerSelection(player);
+    if (betAmount) {
+      placeBet(player);
+    } else {
+      toast.error('Please enter a bet amount first');
+    }
   };
 
-  const placeBet = () => {
-    if (!selectedPlayer) {
-      toast.error('Please select a player first');
-      return;
-    }
-
+  const placeBet = (selectedPlayerChoice: 'left' | 'right') => {
     const amount = parseFloat(betAmount);
     if (isNaN(amount) || amount <= 0) {
       toast.error('Please enter a valid bet amount');
@@ -161,7 +210,7 @@ const CardGame = () => {
       return;
     }
 
-    // Store the bet amount for later use (important for determining winnings)
+    // Store the bet amount for later use
     localStorage.setItem('currentBetAmount', amount.toString());
 
     // Deduct from wallet
@@ -174,10 +223,17 @@ const CardGame = () => {
     // Add transaction record
     addTransaction("Game Bet", amount);
     
-    toast.success(`Bet placed on ${selectedPlayer === 'left' ? leftPlayer.name : rightPlayer.name}`);
+    toast.success(`Bet placed on ${selectedPlayerChoice === 'left' ? leftPlayer.name : rightPlayer.name}`);
+    
+    // If selection timer is very low, finalize game immediately
+    if (selectionTimeLeft <= 2) {
+      finalizeGame();
+    }
   };
 
-  const determineWinner = () => {
+  const finalizeGame = () => {
+    setGamePhase('results');
+    
     // Update games played counter
     const newGamesPlayed = gamesPlayed + 1;
     setGamesPlayed(newGamesPlayed);
@@ -185,7 +241,7 @@ const CardGame = () => {
     
     let userWins = false;
     
-    // First 3 games: User must win at least one (preferably first or second)
+    // First 3 games: User must win at least one
     if (newGamesPlayed <= 3) {
       if (newGamesPlayed === 1) {
         userWins = true; // First game - user wins
@@ -201,27 +257,21 @@ const CardGame = () => {
         }
       }
     } else {
-      // After 3 games, very low winning chance
-      userWins = Math.random() < 0.002; // 0.2% chance to win
+      // After 3 games, 20% winning chance
+      userWins = Math.random() < 0.2; // 20% chance to win
     }
     
-    // Set winner based on calculation
-    let gameWinner: 'left' | 'right';
-    
-    if ((selectedPlayer === 'left' && userWins) || (selectedPlayer === 'right' && !userWins)) {
-      gameWinner = 'left';
+    // Determine winner based on user selection and win chance
+    if ((playerSelection === finalCard) === userWins) {
+      setWinner(finalCard);
     } else {
-      gameWinner = 'right';
+      setWinner(finalCard === 'left' ? 'right' : 'left');
     }
     
-    setWinner(gameWinner);
-    setGamePhase('results');
-    
-    // Make sure bet amount is valid 
+    // Process bet results
     const betAmountValue = parseFloat(betAmount) || 0;
     
-    // Pay winners
-    if (selectedPlayer === gameWinner) {
+    if (playerSelection === winner) {
       const winnings = betAmountValue * 2;
       const newBalance = walletBalance + winnings;
       setWalletBalance(newBalance);
@@ -233,18 +283,23 @@ const CardGame = () => {
       addTransaction("Game Win", winnings);
       
       toast.success(`You won ₹${winnings}!`);
-    } else {
+    } else if (playerSelection !== null) {
       toast.error(`You lost your bet!`);
     }
   };
 
   const startNewGame = () => {
     setSelectedPlayer(null);
+    setPlayerSelection(null);
     setBetAmount('');
-    setTimeLeft(30);
+    setTimeLeft(45);
     setShuffleTimeLeft(10);
+    setSelectionTimeLeft(10);
     setWinner(null);
-    setGamePhase('betting');
+    setFinalCard(null);
+    setCardRotationPhase(false);
+    setShowBackside(false);
+    setGamePhase('initial');
   };
 
   const goToPlayerSelection = () => {
@@ -289,7 +344,7 @@ const CardGame = () => {
       mainClass: `h-full w-full rounded-lg overflow-hidden shadow-lg transition-all duration-300 transform ${
         isSelected ? 'ring-4 ring-game-primary scale-105' : ''
       }`,
-      headerClass: `${player.color} `,
+      headerClass: `${player.color}`,
       footerClass: `p-3 ${player.color} text-white text-center`
     };
   };
@@ -312,122 +367,132 @@ const CardGame = () => {
             </div>
           </div>
           
-          {gamePhase === 'betting' && (
-            <div className="flex justify-center -mt-5">
-              <div className="timer-circle w-16 h-16 rounded-full bg-white border-4 border-game-primary flex items-center justify-center shadow-lg">
-                <div className="flex items-center font-bold text-game-primary">
-                  <Clock size={16} className="mr-1" /> {timeLeft}s
-                </div>
+          {/* Main game timer - always visible and more prominent */}
+          <div className="flex justify-center -mt-5">
+            <div className={`timer-circle w-20 h-20 rounded-full bg-white border-4 ${
+              timeLeft <= 10 ? 'border-red-500 animate-pulse' : 'border-game-primary'
+            } flex items-center justify-center shadow-lg`}>
+              <div className={`flex flex-col items-center font-bold ${
+                timeLeft <= 10 ? 'text-red-500' : 'text-game-primary'
+              }`}>
+                <Clock size={timeLeft <= 10 ? 20 : 16} className="mb-1" /> 
+                <span className={`${timeLeft <= 10 ? 'text-xl' : 'text-lg'}`}>{timeLeft}s</span>
               </div>
             </div>
-          )}
+          </div>
           
-          {gamePhase === 'shuffling' && (
-            <div className="flex justify-center -mt-5">
-              <div className="timer-circle w-16 h-16 rounded-full bg-white border-4 border-red-500 flex items-center justify-center shadow-lg">
-                <div className="flex items-center font-bold text-red-500">
-                  <Clock size={16} className="mr-1" /> {shuffleTimeLeft}s
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {gamePhase === 'betting' && (
+          {/* Initial Phase - Show both player cards */}
+          {(gamePhase === 'initial' || gamePhase === 'cardRotation') && (
             <div className="grid grid-cols-2 gap-4 p-6">
-              <div 
-                className="h-64 cursor-pointer relative"
-                onClick={() => setSelectedPlayer('left')}
-              >
-                {/* Card Container */}
-                <div className={getCardClasses('left').mainClass}>
-                  {/* Card Header - Just the color bar */}
-                  <div className={getCardClasses('left').headerClass}></div>
+              {/* Left Card */}
+              <div className="h-64 relative perspective-1000">
+                <div className={`card-container w-full h-full transition-transform duration-1000 ${cardRotationPhase ? 'rotate-y-180' : ''}`}>
+                  {/* Front Side */}
+                  <div className={`card-front absolute w-full h-full backface-hidden ${getCardClasses('left').mainClass}`}>
+                    {/* Card Header */}
+                    <div className={getCardClasses('left').headerClass}></div>
+                    
+                    {/* Card Body - Player Image */}
+                    <div className={`flex items-center justify-center p-3 h-48 ${leftPlayer.color} from-${leftPlayer.color.split('-')[1]}-700 to-${leftPlayer.color.split('-')[1]}-600`}>
+                      <img 
+                        src={leftPlayer.image} 
+                        alt={leftPlayer.name} 
+                        className="h-40 object-contain drop-shadow-lg" 
+                      />
+                    </div>
+                    
+                    {/* Card Footer */}
+                    <div className={getCardClasses('left').footerClass}>
+                      <p className="font-bold text-sm">{leftPlayer.name}</p>
+                      <p className="text-xs opacity-90">{leftPlayer.team}</p>
+                    </div>
+                  </div>
                   
-                  {/* Card Body - Player Image with team color background */}
-                  <div className={`flex items-center justify-center p-3 h-48 ${leftPlayer.color} from-${leftPlayer.color.split('-')[1]}-700 to-${leftPlayer.color.split('-')[1]}-600`}>
+                  {/* Back Side */}
+                  <div className="card-back absolute w-full h-full backface-hidden rotate-y-180">
                     <img 
-                      src={leftPlayer.image} 
-                      alt={leftPlayer.name} 
-                      className="h-40 object-contain drop-shadow-lg" 
+                      src={cardBackside}
+                      alt="Card back" 
+                      className="w-full h-full object-cover rounded-lg shadow-lg" 
                     />
                   </div>
-                  
-                  {/* Card Footer - Player Name and Team */}
-                  <div className={getCardClasses('left').footerClass}>
-                    <p className="font-bold text-sm">{leftPlayer.name}</p>
-                    <p className="text-xs opacity-90">{leftPlayer.team}</p>
-                  </div>
                 </div>
                 
-                {/* Edit Button */}
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    goToPlayerSelection();
-                  }}
-                  className="absolute bottom-2 right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
-                >
-                  <Edit2 size={16} className="text-gray-600" />
-                </button>
-                
-                {/* Selection Indicator */}
-                {selectedPlayer === 'left' && (
-                  <div className="absolute top-2 left-2 bg-white rounded-full p-1 shadow-md">
-                    <Check size={16} className="text-green-500" />
-                  </div>
+                {/* Edit Button - visible only in initial phase */}
+                {gamePhase === 'initial' && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToPlayerSelection();
+                    }}
+                    className="absolute bottom-2 right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100 z-10"
+                  >
+                    <Edit2 size={16} className="text-gray-600" />
+                  </button>
                 )}
               </div>
               
-              <div 
-                className="h-64 cursor-pointer relative"
-                onClick={() => setSelectedPlayer('right')}
-              >
-                {/* Card Container */}
-                <div className={getCardClasses('right').mainClass}>
-                  {/* Card Header - Just the color bar */}
-                  <div className={getCardClasses('right').headerClass}></div>
-                  
-                  {/* Card Body - Player Image with team color background */}
-                  <div className={`flex items-center justify-center p-3 h-48 ${rightPlayer.color}  from-${rightPlayer.color.split('-')[1]}-700 to-${rightPlayer.color.split('-')[1]}-600`}>
-                    <img 
-                      src={rightPlayer.image} 
-                      alt={rightPlayer.name} 
-                      className="h-40 object-contain drop-shadow-lg" 
-                    />
+              {/* Right Card */}
+              <div className="h-64 relative perspective-1000">
+                <div className={`card-container w-full h-full transition-transform duration-1000 ${cardRotationPhase ? 'rotate-y-180' : ''}`}>
+                  {/* Front Side */}
+                  <div className={`card-front absolute w-full h-full backface-hidden ${getCardClasses('right').mainClass}`}>
+                    {/* Card Header */}
+                    <div className={getCardClasses('right').headerClass}></div>
+                    
+                    {/* Card Body - Player Image */}
+                    <div className={`flex items-center justify-center p-3 h-48 ${rightPlayer.color} from-${rightPlayer.color.split('-')[1]}-700 to-${rightPlayer.color.split('-')[1]}-600`}>
+                      <img 
+                        src={rightPlayer.image} 
+                        alt={rightPlayer.name} 
+                        className="h-40 object-contain drop-shadow-lg" 
+                      />
+                    </div>
+                    
+                    {/* Card Footer */}
+                    <div className={getCardClasses('right').footerClass}>
+                      <p className="font-bold text-sm">{rightPlayer.name}</p>
+                      <p className="text-xs opacity-90">{rightPlayer.team}</p>
+                    </div>
                   </div>
                   
-                  {/* Card Footer - Player Name and Team */}
-                  <div className={getCardClasses('right').footerClass}>
-                    <p className="font-bold text-sm">{rightPlayer.name}</p>
-                    <p className="text-xs opacity-90">{rightPlayer.team}</p>
+                  {/* Back Side */}
+                  <div className="card-back absolute w-full h-full backface-hidden rotate-y-180">
+                    <img 
+                      src={cardBackside}
+                      alt="Card back" 
+                      className="w-full h-full object-cover rounded-lg shadow-lg" 
+                    />
                   </div>
                 </div>
                 
-                {/* Edit Button */}
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    goToPlayerSelection();
-                  }}
-                  className="absolute bottom-2 right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
-                >
-                  <Edit2 size={16} className="text-gray-600" />
-                </button>
-                
-                {/* Selection Indicator */}
-                {selectedPlayer === 'right' && (
-                  <div className="absolute top-2 left-2 bg-white rounded-full p-1 shadow-md">
-                    <Check size={16} className="text-green-500" />
-                  </div>
+                {/* Edit Button - visible only in initial phase */}
+                {gamePhase === 'initial' && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToPlayerSelection();
+                    }}
+                    className="absolute bottom-2 right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100 z-10"
+                  >
+                    <Edit2 size={16} className="text-gray-600" />
+                  </button>
                 )}
               </div>
             </div>
           )}
           
+          {/* Shuffling Phase - Cards swapping animation */}
           {gamePhase === 'shuffling' && (
             <div className="p-6 flex justify-center items-center min-h-[250px] relative overflow-hidden">
+              {/* Shuffle timer */}
+              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-20 bg-white bg-opacity-80 rounded-full px-4 py-2 shadow-lg flex items-center">
+                <Clock size={16} className="mr-2 text-game-primary" />
+                <span className="font-bold text-game-primary">Shuffling: {shuffleTimeLeft}s</span>
+              </div>
+            
               {/* Left card moving right */}
-              <div className="card-shuffle-left absolute w-40 h-56 rounded-lg shadow-lg">
+              <div className="card-shuffle-left absolute w-44 h-64 rounded-lg shadow-lg">
                 <img 
                   src={cardBackside} 
                   alt="Card back" 
@@ -436,7 +501,7 @@ const CardGame = () => {
               </div>
               
               {/* Right card moving left */}
-              <div className="card-shuffle-right absolute w-40 h-56 rounded-lg shadow-lg">
+              <div className="card-shuffle-right absolute w-44 h-64 rounded-lg shadow-lg">
                 <img 
                   src={cardBackside} 
                   alt="Card back" 
@@ -444,15 +509,81 @@ const CardGame = () => {
                 />
               </div>
               
-              <p className="absolute bottom-2 text-center text-gray-500 font-medium">
+              <p className="absolute bottom-2 text-center text-gray-700 font-medium">
                 Shuffling cards...
               </p>
             </div>
           )}
           
+          {/* Selection Phase - One card remains, player must select who it is */}
+          {gamePhase === 'selection' && (
+            <div className="p-6 flex flex-col items-center min-h-[250px] relative">
+              {/* Selection timer */}
+              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-20 bg-yellow-100 border-2 border-yellow-400 rounded-full px-4 py-2 shadow-lg flex items-center">
+                <Clock size={16} className="mr-2 text-yellow-700" />
+                <span className="font-bold text-yellow-700">Select: {selectionTimeLeft}s</span>
+              </div>
+            
+              {/* The final card */}
+              <div className="w-44 h-64 rounded-lg shadow-xl mb-6 mt-10 rotate-y-180">
+                <img 
+                  src={cardBackside}
+                  alt="Mystery card" 
+                  className="w-full h-full object-cover rounded-lg" 
+                />
+              </div>
+              
+              <p className="text-center font-bold text-lg text-indigo-900 mb-4">
+                Who's behind the card?
+              </p>
+              
+              {/* Player selection buttons */}
+              <div className="grid grid-cols-2 gap-4 w-full">
+                <Button
+                  onClick={() => selectPlayer('left')}
+                  className={`bg-${leftPlayer.color.split('-')[1]}-600 hover:bg-${leftPlayer.color.split('-')[1]}-700 p-3 h-auto`}
+                  disabled={playerSelection !== null}
+                >
+                  <div className="flex flex-col items-center">
+                    <img 
+                      src={leftPlayer.image} 
+                      alt={leftPlayer.name} 
+                      className="w-12 h-12 object-cover rounded-full mb-2 border-2 border-white" 
+                    />
+                    <span className="font-bold">{leftPlayer.name}</span>
+                  </div>
+                </Button>
+                
+                <Button
+                  onClick={() => selectPlayer('right')}  
+                  className={`bg-${rightPlayer.color.split('-')[1]}-600 hover:bg-${rightPlayer.color.split('-')[1]}-700 p-3 h-auto`}
+                  disabled={playerSelection !== null}
+                >
+                  <div className="flex flex-col items-center">
+                    <img 
+                      src={rightPlayer.image} 
+                      alt={rightPlayer.name} 
+                      className="w-12 h-12 object-cover rounded-full mb-2 border-2 border-white" 
+                    />
+                    <span className="font-bold">{rightPlayer.name}</span>
+                  </div>
+                </Button>
+              </div>
+              
+              {/* Selection indicator */}
+              {playerSelection && (
+                <div className="mt-4 bg-green-100 text-green-800 p-3 rounded-lg border border-green-300 text-center">
+                  <Check size={20} className="inline-block mr-2" />
+                  You selected {playerSelection === 'left' ? leftPlayer.name : rightPlayer.name}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Results Phase */}
           {gamePhase === 'results' && (
             <div className="p-6 text-center">
-              {selectedPlayer === winner ? (
+              {playerSelection === winner ? (
                 /* User won animation */
                 <div className="mb-6 relative celebration-animation">
                   <PartyPopper className="absolute top-0 left-1/4 text-yellow-500 animate-bounce" size={28} />
@@ -486,11 +617,11 @@ const CardGame = () => {
               )}
               
               <p className="text-xl font-bold mb-6 text-indigo-900">
-                {winner === 'left' ? leftPlayer.name : rightPlayer.name} Won!
+                It was {winner === 'left' ? leftPlayer.name : rightPlayer.name}!
               </p>
               
-              <div className={`p-4 mb-4 rounded-lg ${selectedPlayer === winner ? 'bg-green-100 text-green-800 border-2 border-green-300' : 'bg-red-100 text-red-800 border-2 border-red-300'}`}>
-                {selectedPlayer === winner ? (
+              <div className={`p-4 mb-4 rounded-lg ${playerSelection === winner ? 'bg-green-100 text-green-800 border-2 border-green-300' : 'bg-red-100 text-red-800 border-2 border-red-300'}`}>
+                {playerSelection === winner ? (
                   <div>
                     <p className="font-bold text-lg">Congratulations!</p>
                     <p className="text-2xl font-bold mt-2">You won ₹{(parseFloat(betAmount) || 0) * 2}</p>
@@ -503,10 +634,15 @@ const CardGame = () => {
                   </div>
                 )}
               </div>
+              
+              <div className="text-sm text-gray-500 mb-4">
+                Next game starts in {timeLeft} seconds...
+              </div>
             </div>
           )}
           
-          {gamePhase === 'betting' && (
+          {/* Betting UI - only shown in initial or selection phase */}
+          {(gamePhase === 'initial' || gamePhase === 'selection') && (
             <div className="p-4 bg-indigo-50 border-t border-indigo-100">
               <h2 className="text-lg font-bold mb-3 flex items-center text-indigo-900">
                 <span className="w-2 h-6 bg-game-primary mr-2 rounded"></span>
@@ -519,109 +655,118 @@ const CardGame = () => {
                   value={betAmount}
                   onChange={(e) => setBetAmount(e.target.value)}
                   className="bg-white border-2 focus:border-game-primary text-lg p-6 rounded-lg shadow-sm"
+                  disabled={gamePhase === 'selection' && playerSelection !== null}
                 />
-                <Button 
-                  onClick={placeBet} 
-                  className={`bg-game-primary hover:bg-game-primary/80 transition-all text-lg py-6 rounded-lg shadow-md ${
-                    !selectedPlayer || !betAmount ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={!selectedPlayer || !betAmount}
-                >
-                  Place Bet
-                </Button>
-              </div>
-              
-              <div className="mt-4 flex justify-center items-center text-sm">
-                <div>
-                  <p className="font-medium text-center text-indigo-900">
-                    {selectedPlayer ? (
-                      <>Selected: {selectedPlayer === 'left' ? leftPlayer.name : rightPlayer.name}</>
-                    ) : (
-                      <>Select a player to continue</>
-                    )}
-                  </p>
-                </div>
+                
+                {gamePhase === 'initial' && (
+                  <div className="text-sm text-center text-game-primary font-medium">
+                    Cards will rotate in {Math.max(0, 38 - (45 - timeLeft))} seconds
+                  </div>
+                )}
               </div>
             </div>
           )}
           
+          {/* Results Phase - Play Again Button */}
           {gamePhase === 'results' && (
             <div className="p-4 bg-indigo-50 border-t border-indigo-100">
               <Button 
                 onClick={startNewGame} 
                 className="bg-game-primary hover:bg-game-primary/80 w-full transition-transform hover:scale-105 py-6 text-lg rounded-lg shadow-lg"
               >
-                Play Again
+                Play Again Now
               </Button>
             </div>
           )}
         </div>
         
-        {/* Enhanced win chance info card - simplified for users */}
-        {gamePhase === 'betting' && (
+        {/* Win chance info card */}
+        {(gamePhase === 'initial' || gamePhase === 'selection') && (
           <div className="bg-white rounded-lg shadow-lg p-4 border border-indigo-100">
             <div className="flex items-center mb-2">
               <Trophy size={18} className="text-yellow-500 mr-2" />
-              <h3 className="font-bold text-indigo-900">Double Your Money!</h3>
+              <h3 className="font-bold text-gray-800">Win Chance</h3>
             </div>
-            <p className="text-gray-700 text-sm">
-              Select your favorite player and place your bet. If your player wins, you'll receive double your bet amount instantly!
+            <p className="text-sm text-gray-600">
+              Select carefully and increase your winning chances! Winners get 2x their bet amount.
             </p>
           </div>
         )}
       </div>
       
-      {/* CSS for animations */}
+      {/* Add custom CSS for animations */}
       <style >{`
-        @keyframes shuffle-left {
-          0% { left: -50%; opacity: 0.8; transform: rotate(-5deg); }
-          50% { opacity: 1; transform: rotate(5deg); }
-          100% { left: 100%; opacity: 0.8; transform: rotate(-5deg); }
+        /* Card flip animation */
+        .perspective-1000 {
+          perspective: 1000px;
         }
         
-        @keyframes shuffle-right {
-          0% { right: -50%; opacity: 0.8; transform: rotate(5deg); }
-          50% { opacity: 1; transform: rotate(-5deg); }
-          100% { right: 100%; opacity: 0.8; transform: rotate(5deg); }
+        .backface-hidden {
+          backface-visibility: hidden;
         }
         
+        .rotate-y-180 {
+          transform: rotateY(180deg);
+        }
+        
+        /* Card shuffle animation */
         .card-shuffle-left {
-          animation: shuffle-left 1.5s linear infinite;
+          animation: shuffle-left 2s infinite alternate;
         }
         
         .card-shuffle-right {
-          animation: shuffle-right 1.5s linear infinite;
+          animation: shuffle-right 2s infinite alternate;
         }
         
-        @keyframes winner-animation {
-          0% { transform: scale(0.8); opacity: 0; }
-          50% { transform: scale(1.1); }
-          100% { transform: scale(1); opacity: 1; }
+        @keyframes shuffle-left {
+          0%, 100% { transform: translateX(-60px) rotateY(180deg); }
+          50% { transform: translateX(60px) rotateY(180deg); }
         }
         
+        @keyframes shuffle-right {
+          0%, 100% { transform: translateX(60px) rotateY(180deg); }
+          50% { transform: translateX(-60px) rotateY(180deg); }
+        }
+        
+        /* Winner animation */
         .winner-animation {
-          animation: winner-animation 1s ease-out;
+          animation: winner-pulse 1s infinite alternate;
         }
         
-        @keyframes loser-animation {
-          0% { transform: scale(1); filter: grayscale(0); }
-          100% { transform: scale(0.95); filter: grayscale(40%); }
+        @keyframes winner-pulse {
+          0% { transform: scale(1); }
+          100% { transform: scale(1.05); filter: drop-shadow(0 0 10px gold); }
         }
         
         .loser-animation {
-          animation: loser-animation 1s ease-out forwards;
+          animation: loser-shake 1s;
+          filter: grayscale(40%);
         }
         
-        @keyframes celebration {
-          0% { transform: rotate(-5deg); }
-          25% { transform: rotate(5deg); }
-          50% { transform: rotate(-3deg); }
-          75% { transform: rotate(3deg); }
-          100% { transform: rotate(0); }
+        @keyframes loser-shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-5px); }
+          40%, 80% { transform: translateX(5px); }
         }
         
+        /* Celebration animation */
         .celebration-animation {
-          animation: celebration 1s ease-in-out;
+          animation: celebrate 0.5s infinite alternate;
+        }
+        
+        @keyframes celebrate {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-5px); }
+        }
+        
+        /* Timer circle pulsing */
+        .timer-circle {
+          animation: circle-pulse 1s infinite alternate;
+        }
+        
+        @keyframes circle-pulse {
+          0% { box-shadow: 0 0 0 0 rgba(66, 153, 225, 0.4); }
+          100% { box-shadow: 0 0 0 10px rgba(66, 153, 225, 0); }
         }
       `}</style>
     </div>

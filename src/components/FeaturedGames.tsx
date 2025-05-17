@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 const FeaturedGames = () => {
   return (
     <div className="grid grid-cols-2 gap-3 px-2 py-3">
-      <Link to="/card-game" className="relative rounded-lg overflow-hidden shadow-lg">
+      <Link to="/guess-player-game" className="relative rounded-lg overflow-hidden shadow-lg">
         <div className="h-32 bg-gradient-to-r from-blue-600 to-purple-700 flex items-center justify-center">
           <div className="absolute inset-0 flex items-center justify-center space-x-[-30px]">
             <img 

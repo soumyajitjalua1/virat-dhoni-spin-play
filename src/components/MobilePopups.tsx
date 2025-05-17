@@ -50,7 +50,7 @@ const MobilePopups = () => {
       )}
 
       {showOffers && (
-        <div className=" text-white rounded-2xl p-4 max-w-sm w-full shadow-xl overflow-y-auto max-h-[90vh] mt-[47px]" style={{ backgroundColor: "rgb(82 119 224)" }}>
+        <div className=" text-white rounded-2xl p-4 max-w-sm w-full shadow-xl overflow-y-auto max-h-[90vh] mt-[47px]" style={{ backgroundColor: "rgb(82 119 224)", marginBottom: "113px" }}>
           <h2
             className="font-bold text-center mb-3"
             style={{ fontSize: "1.5rem" }}

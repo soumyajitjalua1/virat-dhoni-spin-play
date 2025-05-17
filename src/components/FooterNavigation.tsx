@@ -46,13 +46,16 @@ const FooterNavigation: React.FC = () => {
         <Wallet className={`${location.pathname === "/wallet" ? active : inactive} w-6 h-6`} />
         <span className={`text-xs mt-1 ${location.pathname === "/wallet" ? active : ""}`}>Wallet</span>
       </div>
-      <div
+      <div 
         className="flex-1 flex flex-col items-center justify-center cursor-pointer"
         onClick={() => navigate("/account")}
       >
         <User className={`${location.pathname === "/account" ? active : inactive} w-6 h-6`} />
-        <span className={`text-xs mt-1 ${location.pathname === "/account" ? active : ""}`}>Account</span>
+        <span className={`text-xs mt-1 ${location.pathname === "/account" ? active : ""}`}>
+          Account
+        </span>
       </div>
+
     </div>
   );
 };

@@ -11,12 +11,17 @@ import TirangaInfoSection from '@/components/RichbigInfoSection';
 import HelpMenuSection from '@/components/HelpMenuSection';
 const bannerImages = [
   "https://www.pocket52.com/_ipx/s_2400x1200/images/landing-pages/poker-rules-resized.webp",
-  "https://i0.wp.com/bonaccordaberdeen.com/wp-content/uploads/2023/01/Game-ready-to-play-504x336-1.webp?fit=504%2C336&ssl=1",
-  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5LTKfLoNZbT5--GKSG341Dnby18x9cKMtTA&s",
-  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcScQEw1oPUaV3Mg5NsIOFYp9yozz1WNjJ2xUw&s",
-  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTzDZdEA7Rox4Rc2Uf9-kcTWusbBFhylc0uDg&s",
-  "https://ossimg.tirangaagent.com/Tiranga/banner/Banner_20240413184815hgcm.png",
-  "https://ossimg.tirangaagent.com/Tiranga/banner/Banner_20240412140444pw4u.jpg"
+  "/IMG 1.webp",
+  "/IMG 2.webp",
+  "/IMG 3.webp",
+  "/IMG 4.webp",
+  "/IMG 5.webp",
+  "/IMG 6.webp",
+  "/IMG 7.webp",
+  "/IMG 8.webp",
+  "/IMG 9.webp",
+  "/IMG 10.webp",
+  "/IMG 11.webp"
 ];
 
 const popularGames = [
