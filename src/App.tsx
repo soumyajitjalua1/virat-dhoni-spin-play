@@ -64,18 +64,7 @@ const App = () => (
           element={<GameSection title="Casino Games" games={casinoGames} />}
         />
           <Route
-            path="/guess-player-game"
-            element={
-              <>
-                <SignedIn>
-                  <GuessPlayerGame />
-                </SignedIn>
-                <SignedOut>
-                  <RedirectToSignIn />
-                </SignedOut>
-              </>
-            }
-          />
+            path="/guess-player-game" element={<GuessPlayerGame />} />
           <Route path="/wheel-spin" element={<WheelSpin />} />
           <Route path="/coming-soon" element={<ComingSoon />} />
           <Route path="/login" element={<SignIn />} />
